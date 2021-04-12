@@ -1,5 +1,6 @@
 import itertools
 import configparser
+import argparse
 
 dna_translation_table = str.maketrans("ACTG", "TGAC")
 
@@ -71,16 +72,32 @@ def compare_kmer_sets(sets):
 
 
 if __name__ == '__main__':
-    config_file = './kmers_medley.conf'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', nargs=1)
+    args = parser.parse_args()
+
+    config_file = args.config
     config = configparser.ConfigParser()
     config.read(config_file)
 
     dna_bases = config['SETUP']['alphabet']
     kmer_repeat = int(config['SETUP']['kmer_length'])
     dna_duplex = config['SETUP']['duplex']
-    file_path = config['SETUP']['file']
-    with open(file_path) as file:
-        sequences = file.read().rstrip().splitlines()
-    kmers = create_kmers_generator(dna_bases, kmer_repeat)
-    most_different_kmer_set = select_most_different_kmers(sequences, kmers, kmer_repeat, dna_duplex)
-    print(most_different_kmer_set)
+    output_file = config['SETUP']['output_file']
+    file_paths = config['INPUT_FILES']['file_path']
+    result_kmer_sets = list()
+
+    file_list = file_paths.split(',')
+
+    for file_path in file_list:
+        with open(file_path, 'r') as file:
+            sequences = file.read().rstrip().splitlines()
+        kmers = create_kmers_generator(dna_bases, kmer_repeat)
+        most_different_kmer_set = select_most_different_kmers(sequences, kmers, kmer_repeat, dna_duplex)
+        result_kmer_sets.append(most_different_kmer_set)
+
+    intersection_set = compare_kmer_sets(result_kmer_sets)
+
+    with open(output_file, 'w') as file:
+        for element in intersection_set:
+            file.write(element + '\n')
